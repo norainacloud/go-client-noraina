@@ -113,6 +113,10 @@ func CheckResponse(r *http.Response) error {
 	}
 
 	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+
 	res := map[string]string{}
 	if err == nil && len(data) > 0 {
 		err := json.Unmarshal(data, &res)
