@@ -1,11 +1,13 @@
 package noraina
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"log"
 	"net/http"
+)
+
+const (
+	instanceRoute = "api/instance"
 )
 
 type InstanceRequest struct {
@@ -72,105 +74,56 @@ type IPAdress struct {
 	IPv6 string `json:"ipv6"`
 }
 
-func (c *NorainaApiClient) CreateInstance(ireq InstanceRequest) (*InstanceResponse, error) {
-	b := new(bytes.Buffer)
-	err := json.NewEncoder(b).Encode(ireq)
+func (c *Client) CreateInstance(ctx context.Context, ireq InstanceRequest) (*InstanceResponse, error) {
+	path := instanceRoute
+
+	req, err := c.NewRequest(ctx, http.MethodPost, path, ireq)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, norainaDomain+instanceRoute, b)
+	instanceResponse := new(InstanceResponse)
+	err = c.Do(ctx, req, instanceResponse)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("x-access-token", c.Token)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.Client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("[ERROR] Create Instance Error with Status code %v", resp.StatusCode)
-	}
-
-	log.Printf("[DEBUG] CREATE -> response Status : %s", resp.Status)
-	log.Printf("[DEBUG] CREATE -> response Headers : %s", resp.Header)
-	log.Printf("[DEBUG] CREATE -> response Body : %s", resp.Body)
-
-	instanceResponse := &InstanceResponse{}
-	err = json.NewDecoder(resp.Body).Decode(instanceResponse)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Printf("[DEBUG] Instance ID %v", instanceResponse.Instance.Id)
-	log.Printf("[DEBUG] Tenant ID %v", instanceResponse.Instance.TenantId)
 
 	return instanceResponse, nil
 }
 
-func (c *NorainaApiClient) UpdateInstance(id string, ireq InstanceRequest) (*InstanceResponse, error) {
-	b := new(bytes.Buffer)
-	err := json.NewEncoder(b).Encode(ireq)
+func (c *Client) UpdateInstance(ctx context.Context, id string, ireq InstanceRequest) (*InstanceResponse, error) {
+	path := fmt.Sprintf("%s/%s", instanceRoute, id)
+
+	req, err := c.NewRequest(ctx, http.MethodPost, path, ireq)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, norainaDomain+instanceRoute+"/"+id, b)
+	instanceResponse := new(InstanceResponse)
+	err = c.Do(ctx, req, instanceResponse)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("x-access-token", c.Token)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.Client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("[ERROR] Update Instance Error with Status code %v", resp.StatusCode)
-	}
-
-	log.Printf("[DEBUG] CREATE -> response Status : %s", resp.Status)
-	log.Printf("[DEBUG] CREATE -> response Headers : %s", resp.Header)
-	log.Printf("[DEBUG] CREATE -> response Headers : %v", resp.Body)
-
-	instanceResponse := &InstanceResponse{}
-	err = json.NewDecoder(resp.Body).Decode(instanceResponse)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Printf("[DEBUG] Instance ID %v", instanceResponse.Instance.Id)
-	log.Printf("[DEBUG] Tenant ID %v", instanceResponse.Instance.TenantId)
 
 	return instanceResponse, nil
 }
 
-func (c *NorainaApiClient) GetInstance(id string) (*InstanceResponse, error) {
-	body, err := c.getResource(id, instanceRoute)
-	if err != nil {
-		return nil, err
-	}
-	defer body.Close()
-
-	instanceResponse := &InstanceResponse{}
-	err = json.NewDecoder(body).Decode(instanceResponse)
+func (c *Client) GetInstance(ctx context.Context, id string) (*InstanceResponse, error) {
+	path := fmt.Sprintf("%s/%s", instanceRoute, id)
+	req, err := c.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("[DEBUG] Instance ID %v", instanceResponse.Instance.Id)
-	log.Printf("[DEBUG] Tenant ID %v", instanceResponse.Instance.TenantId)
+	instanceResponse := new(InstanceResponse)
+	err = c.Do(ctx, req, instanceResponse)
+	if err != nil {
+		return nil, err
+	}
 
 	return instanceResponse, nil
 }
 
-func (c *NorainaApiClient) DeleteInstance(id string) error {
-	return c.deleteResource(id, instanceRoute)
+func (c *Client) DeleteInstance(ctx context.Context, id string) error {
+	return c.deleteResource(ctx, id, instanceRoute)
 }
